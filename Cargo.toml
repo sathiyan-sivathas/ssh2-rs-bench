@@ -9,6 +9,12 @@ publish = ["metaswitch"]
 name = "ssh2"
 path = "src/ssh2.rs"
 
+[[bin]]
+name = "async-ssh2"
+path = "src/async_ssh2.rs"
+
 [dependencies]
 anyhow = "1"
+async-ssh2 = "0.1.1-beta"
+smol = "0.1"
 ssh2 = "0.8"

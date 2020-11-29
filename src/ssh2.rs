@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use ssh2::Session;
 use std::net::TcpStream;
 use std::path::Path;
@@ -31,9 +31,26 @@ fn main() -> Result<()> {
         }
     });
 
-    let _listener = session.channel_forward_listen(30000, Some("localhost"), None);
+    let (mut listener, _) =
+        ssh2_run(|| session.channel_forward_listen(30000, Some("localhost"), None))?;
+
+    let _channel = ssh2_run(|| listener.accept())?;
 
     handle.join().unwrap()?;
 
     Ok(())
+}
+
+fn ssh2_run<T, F: FnMut() -> std::result::Result<T, ssh2::Error>>(mut fun: F) -> Result<T> {
+    loop {
+        match fun() {
+            Ok(t) => break Ok(t),
+            Err(e)
+                if std::io::Error::from(ssh2::Error::from_errno(e.code())).kind()
+                    == std::io::ErrorKind::WouldBlock => {}
+            Err(e) => break Err(e).context("SSH error"),
+        }
+
+        thread::sleep(Duration::from_millis(10));
+    }
 }
